@@ -66,8 +66,7 @@ func Serve(transport string) *server.MCPServer {
 		})
 
 		// ✅ MCP API endpoint
-		mcpHandler := server.NewStreamableHTTPServer 
-		(s, server.WithHTTPContextFunc(
+		mcpHandler := server.NewStreamableHTTPServer (s, server.WithHTTPContextFunc(
 			multicontext.MultiHTTPContextFunc(
 				session.ContextWithHTTPSession(sessionStore),
 				authn.ContextWithAPITokenFromHeader,
