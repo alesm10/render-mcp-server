@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
-	"encoding/json"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/authn"
@@ -22,11 +22,7 @@ import (
 )
 
 func Serve(transport string) *server.MCPServer {
-	// Create MCP server
-	s := server.NewMCPServer(
-		"render-mcp-server",
-		cfg.Version,
-	)
+	s := server.NewMCPServer("render-mcp-server", cfg.Version)
 
 	c, err := client.NewDefaultClient()
 	if err != nil {
@@ -41,21 +37,6 @@ func Serve(transport string) *server.MCPServer {
 	s.AddTools(logs.Tools(c)...)
 	s.AddTools(metrics.Tools(c)...)
 
-	// --- ✅ JSON-RPC health endpoint ---
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"jsonrpc": "2.0",
-			"id":      1,
-			"result": map[string]interface{}{
-				"ok":      true,
-				"message": "render-mcp-server running",
-			},
-		})
-	})
-	go http.ListenAndServe(":"+os.Getenv("PORT"), nil)
-	// --- ✅ konec health endpointu ---
-
 	if transport == "http" {
 		var sessionStore session.Store
 		if redisURL, ok := os.LookupEnv("REDIS_URL"); ok {
@@ -68,14 +49,40 @@ func Serve(transport string) *server.MCPServer {
 			log.Print("using in-memory session store\n")
 			sessionStore = session.NewInMemoryStore()
 		}
-		err := server.
-			NewStreamableHTTPServer(s, server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
+
+		mux := http.NewServeMux()
+
+		// ✅ Health check endpoint
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result": map[string]interface{}{
+					"ok":      true,
+					"message": "render-mcp-server running",
+				},
+			})
+		})
+
+		// ✅ MCP API endpoint
+		mcpHandler := server.NewStreamableHTTPHandler(s, server.WithHTTPContextFunc(
+			multicontext.MultiHTTPContextFunc(
 				session.ContextWithHTTPSession(sessionStore),
 				authn.ContextWithAPITokenFromHeader,
-			))).
-			Start(":10000")
+			),
+		))
+		mux.Handle("/mcp", mcpHandler)
+
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "3000"
+		}
+
+		log.Printf("✅ MCP server listening on port %s\n", port)
+		err = http.ListenAndServe(":"+port, mux)
 		if err != nil {
-			log.Fatalf("Starting Streamable server: %v\n:", err)
+			log.Fatalf("Server error: %v\n", err)
 		}
 	} else {
 		err := server.ServeStdio(s, server.WithStdioContextFunc(multicontext.MultiStdioContextFunc(
@@ -89,4 +96,5 @@ func Serve(transport string) *server.MCPServer {
 
 	return s
 }
+
 
