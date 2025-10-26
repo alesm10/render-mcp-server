@@ -1,4 +1,5 @@
-	if transport == "http" {
+       package cmd
+        if transport == "http" {
 		var sessionStore session.Store
 		if redisURL, ok := os.LookupEnv("REDIS_URL"); ok {
 			log.Print("using Redis session store\n")
