@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"log"
+	"net/http"
 	"os"
+	"encoding/json"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/authn"
@@ -28,7 +30,6 @@ func Serve(transport string) *server.MCPServer {
 
 	c, err := client.NewDefaultClient()
 	if err != nil {
-		// TODO: We can't create a client unless we're logged in, so we should handle that error case.
 		panic(err)
 	}
 
@@ -39,6 +40,21 @@ func Serve(transport string) *server.MCPServer {
 	s.AddTools(keyvalue.Tools(c)...)
 	s.AddTools(logs.Tools(c)...)
 	s.AddTools(metrics.Tools(c)...)
+
+	// --- ✅ JSON-RPC health endpoint ---
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result": map[string]interface{}{
+				"ok":      true,
+				"message": "render-mcp-server running",
+			},
+		})
+	})
+	go http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+	// --- ✅ konec health endpointu ---
 
 	if transport == "http" {
 		var sessionStore session.Store
@@ -71,7 +87,6 @@ func Serve(transport string) *server.MCPServer {
 		}
 	}
 
-	// Start JSON-RPC health endpoint
-StartHealthEndpoint()
 	return s
 }
+
