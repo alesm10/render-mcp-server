@@ -71,5 +71,7 @@ func Serve(transport string) *server.MCPServer {
 		}
 	}
 
+	// Start JSON-RPC health endpoint
+StartHealthEndpoint()
 	return s
 }
