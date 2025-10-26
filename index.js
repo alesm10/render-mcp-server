@@ -42,10 +42,14 @@ app.get("/openapi.json", (req, res) => {
   });
 });
 
-// Base POST handler for MCP
 app.post("/", (req, res) => {
-  res.status(200).json({ ok: true, message: "MCP endpoint connected" });
+  res.status(200).json({
+    jsonrpc: "2.0",
+    id: req.body?.id || "1",
+    result: { status: "ok", info: "MCP endpoint connected" }
+  });
 });
+
 
 app.listen(port, () => {
   console.log(`✅ MCP server is running on port ${port}`);
