@@ -70,16 +70,14 @@ func Serve(transport string) *server.MCPServer {
 		})
 
 		// ✅ MCP API endpoint
-		mcpHandler, err := server.NewStreamableHTTPServer(
-			s,
-			server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
-				session.ContextWithHTTPSession(sessionStore),
-				authn.ContextWithAPITokenFromHeader,
-			)),
-		)
-		if err != nil {
-			log.Fatalf("Failed to initialize MCP HTTP server: %v", err)
-		}
+mcpHandler := server.NewStreamableHTTPServer(
+	s,
+	server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
+		session.ContextWithHTTPSession(sessionStore),
+		authn.ContextWithAPITokenFromHeader,
+	)),
+)
+
 		mux.Handle("/mcp", mcpHandler)
 
 		port := os.Getenv("PORT")
