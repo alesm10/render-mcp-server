@@ -16,15 +16,23 @@ func main() {
 	flag.BoolVar(versionFlag, "v", false, "Print version information and exit")
 
 	var transport string
-	flag.StringVarP(&transport, "transport", "t", "stdio", "Transport type (stdio or http)")
-
+	flag.StringVarP(&transport, "transport", "t", "", "Transport type (stdio or http)")
 	flag.Parse()
+
+	// ✅ If not provided via flag, read from ENV
+	if transport == "" {
+		if envTransport := os.Getenv("TRANSPORT"); envTransport != "" {
+			transport = envTransport
+		} else {
+			transport = "stdio"
+		}
+	}
 
 	if *versionFlag {
 		fmt.Println("render-mcp-server version", cfg.Version)
 		os.Exit(0)
 	}
 
-	// Start the server
+	fmt.Printf("🚀 Starting Render MCP Server with transport: %s\n", transport)
 	cmd.Serve(transport)
 }
