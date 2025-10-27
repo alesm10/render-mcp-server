@@ -82,7 +82,7 @@ mcpHandler := server.NewStreamableHTTPServer(
 
 		port := os.Getenv("PORT")
 		if port == "" {
-			port = "3000"
+			port = "8080"
 		}
 
 		log.Printf("✅ MCP server listening on port %s\n", port)
