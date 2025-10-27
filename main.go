@@ -87,7 +87,7 @@ func main() {
 	go func() {
 		fmt.Println("🌐 Listening on http://localhost:8080/message")
 		http.HandleFunc("/message", handleIncomingMessage)
-		if err := http.ListenAndServe(":8080", nil); err != nil {
+		if err := http.ListenAndServe(":8085", nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
