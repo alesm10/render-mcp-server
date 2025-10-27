@@ -34,5 +34,9 @@ func main() {
 	}
 
 	fmt.Printf("🚀 Starting Render MCP Server with transport: %s\n", transport)
+
+	// ✅ Přidej tento testovací výpis
+	fmt.Println("🔑 MAKE_WEBHOOK_TOKEN =", os.Getenv("MAKE_WEBHOOK_TOKEN"))
+
 	cmd.Serve(transport)
 }
