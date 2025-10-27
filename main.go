@@ -33,10 +33,15 @@ func main() {
 		os.Exit(0)
 	}
 
+	// 🚀 Start info
 	fmt.Printf("🚀 Starting Render MCP Server with transport: %s\n", transport)
 
-	// ✅ Přidej tento testovací výpis
+	// ✅ Debug výpis pro kontrolu prostředí
 	fmt.Println("🔑 MAKE_WEBHOOK_TOKEN =", os.Getenv("MAKE_WEBHOOK_TOKEN"))
+	fmt.Println("🔑 RENDER_API_KEY =", os.Getenv("RENDER_API_KEY"))
+	fmt.Println("🔑 PORT =", os.Getenv("PORT"))
+	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
+	// Spusť server
 	cmd.Serve(transport)
 }
