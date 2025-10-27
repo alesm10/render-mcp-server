@@ -22,7 +22,7 @@ type IncomingMessage struct {
 // 🌐 URL Make webhooku (nahraď svojí URL z Make)
 const makeWebhookURL = "https://hook.eu2.make.com/6fr8k32ac8ryvt6ickkxh55wkdjimwtf"
 
-// 🧠 Handler pro příjem zprávy a odeslání do Make
+// 🧠 Handler pro příjem zprávy a odeslání do Make 
 func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
