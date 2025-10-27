@@ -56,6 +56,37 @@ func Serve(transport string) *server.MCPServer {
 
 		mux := http.NewServeMux()
 
+		// ✅ Webhook endpoint pro Make.com
+mux.HandleFunc("/hooks/make", func(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Ověření bezpečnostního tokenu
+	expected := os.Getenv("MAKE_WEBHOOK_TOKEN")
+	token := r.Header.Get("X-Auth-Token")
+	if expected == "" || token != expected {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Načtení JSON dat
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("[make-webhook] received: %+v", payload)
+
+	// Odpověď Make.com
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":      true,
+		"message": "data received",
+	})
+})
 		// ✅ Health check endpoint
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
