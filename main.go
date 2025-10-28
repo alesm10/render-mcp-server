@@ -25,6 +25,8 @@ const makeWebhookURL = "https://hook.eu2.make.com/6fr8k32ac8ryvt6ickkxh55wkdjimw
 
 // 🧠 Handler pro příjem zprávy a odeslání do Make
 func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("📩 Přijat požadavek na /message")
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
 		return
@@ -32,18 +34,23 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 
 	var msg IncomingMessage
 	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+		fmt.Println("❌ Chyba při čtení JSON:", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
+	fmt.Printf("➡️ Přijatá zpráva od %s: %s (%s)\n", msg.Sender, msg.Message, msg.Time)
+
 	data, err := json.Marshal(msg)
 	if err != nil {
+		fmt.Println("❌ Chyba při serializaci JSON:", err)
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := http.Post(makeWebhookURL, "application/json", bytes.NewBuffer(data))
 	if err != nil {
+		fmt.Println("❌ Chyba při odesílání do Make:", err)
 		http.Error(w, "Error sending to Make", http.StatusInternalServerError)
 		return
 	}
@@ -53,6 +60,7 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("📤 Odesláno do Make | Status: %s | Odpověď: %s\n", resp.Status, string(body))
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		fmt.Println("⚠️ Make vrátil chybu – data neuložena.")
 		http.Error(w, "Make returned error", http.StatusBadGateway)
 		return
 	}
@@ -61,13 +69,8 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("✅ Message forwarded to Make"))
 }
 
-// 🩵 Ping endpoint
-func handlePing(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("🏓 pong – Render MCP Server běží! ✅"))
-}
-
 func main() {
+	// 🏁 Definice a načtení flagů
 	versionFlag := flag.Bool("version", false, "Print version information and exit")
 	flag.BoolVar(versionFlag, "v", false, "Print version information and exit")
 
@@ -75,6 +78,7 @@ func main() {
 	flag.StringVarP(&transport, "transport", "t", "", "Transport type (stdio or http)")
 	flag.Parse()
 
+	// 🔧 Transport z ENV
 	if transport == "" {
 		if envTransport := os.Getenv("TRANSPORT"); envTransport != "" {
 			transport = envTransport
@@ -88,27 +92,25 @@ func main() {
 		os.Exit(0)
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
+	// 🚀 Start info
 	fmt.Printf("🚀 Starting Render MCP Server with transport: %s\n", transport)
 	fmt.Println("🔑 MAKE_WEBHOOK_TOKEN =", os.Getenv("MAKE_WEBHOOK_TOKEN"))
 	fmt.Println("🔑 RENDER_API_KEY =", os.Getenv("RENDER_API_KEY"))
-	fmt.Println("🔑 PORT =", port)
+	fmt.Println("🔑 PORT =", os.Getenv("PORT"))
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// ✅ Vedlejší server pro /ping a /message běží na 9090 (ne 8080)
+	// 🌍 Mini HTTP endpoint paralelně
 	go func() {
-		fmt.Println("🌐 Mini server listening on port 9090 ...")
-		http.HandleFunc("/ping", handlePing)
+		fmt.Println("🌐 Public server listening on port 8080 ...")
 		http.HandleFunc("/message", handleIncomingMessage)
-		if err := http.ListenAndServe(":9090", nil); err != nil {
+		http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("🏓 pong – Render MCP Server běží a odpovídá ✅"))
+		})
+		if err := http.ListenAndServe(":8080", nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
 
-	// ▶️ Spusť MCP server (Render hlavní proces)
+	// ▶️ Spusť MCP server
 	cmd.Serve(transport)
 }
