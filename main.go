@@ -1,94 +1,61 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
-
-	flag "github.com/spf13/pflag"
 )
 
-// Struktura příchozí zprávy
-type IncomingMessage struct {
+type Message struct {
 	Sender  string `json:"sender"`
 	Message string `json:"message"`
 	Time    string `json:"time"`
 }
 
-// 🔗 Webhook URL z Make.com (nezapomeň, že to je tvůj vlastní)
-const makeWebhookURL = "https://hook.eu2.make.com/t85w0984wnlyu7oklq8kdnttsj90iz6n"
-
-// Handler pro příchozí zprávy
-func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("📩 /message hit")
-
+func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var msg IncomingMessage
+	var msg Message
 	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		fmt.Println("❌ Invalid JSON:", err)
 		return
 	}
 
-	fmt.Printf("➡️ Received message: %+v\n", msg)
+	log.Printf("📩 Received message: %+v\n", msg)
 
-	// Připrav JSON payload pro Make
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
-		fmt.Println("❌ Error encoding JSON:", err)
+	makeWebhook := os.Getenv("MAKE_WEBHOOK_URL")
+	if makeWebhook == "" {
+		http.Error(w, "MAKE_WEBHOOK_URL not set", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Println("🌍 Sending to Make:", makeWebhookURL)
-	resp, err := http.Post(makeWebhookURL, "application/json", bytes.NewBuffer(payload))
+	payload, _ := json.Marshal(msg)
+	resp, err := http.Post(makeWebhook, "application/json", 
+	                      http.NoBody)
 	if err != nil {
-		http.Error(w, "Error sending to Make", http.StatusBadGateway)
-		fmt.Println("❌ Make returned error:", err)
+		log.Printf("❌ Error sending to Make: %v\n", err)
+		http.Error(w, "Failed to forward to Make", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Println("⬅️ Make response status:", resp.Status)
-	fmt.Println("⬅️ Make response body:", string(body))
-
-	if resp.StatusCode != 200 {
-		fmt.Println("⚠️ Make returned non-200, status:", resp.Status)
-		http.Error(w, "Make returned non-200", http.StatusBadGateway)
-		return
-	}
-
+	log.Printf("➡️ Sent to Make: %s | Status: %s\n", makeWebhook, resp.Status)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("✅ Message forwarded to Make"))
-	fmt.Println("✅ Successfully forwarded to Make!")
+	fmt.Fprintf(w, "OK")
 }
 
-// Hlavní funkce
 func main() {
-	var transport string
-	flag.StringVarP(&transport, "transport", "t", "", "Transport type (stdio or http)")
-	flag.Parse()
-
-	// 🧩 Render přiřazuje port dynamicky
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "10000" // fallback
+		port = "8080"
 	}
-	fmt.Println("📦 PORT env var:", port)
+	http.HandleFunc("/message", handler)
 
-	http.HandleFunc("/message", handleIncomingMessage)
-
-	fmt.Println("🚀 MCP server listening on port", port)
-	err := http.ListenAndServe(":"+port, nil)
-	if err != nil {
-		fmt.Println("❌ Server error:", err)
-	}
+	log.Printf("🚀 MCP server listening on port %s\n", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
