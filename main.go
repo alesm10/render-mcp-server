@@ -11,15 +11,17 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+// Struktura příchozí zprávy
 type IncomingMessage struct {
 	Sender  string `json:"sender"`
 	Message string `json:"message"`
 	Time    string `json:"time"`
 }
 
-// 🔗 Sem zadej přesně svůj webhook z Make
+// 🔗 Webhook URL z Make.com (nezapomeň, že to je tvůj vlastní)
 const makeWebhookURL = "https://hook.eu2.make.com/6fr8k32ac8ryvt6ickkxh55wkdjimwtf"
 
+// Handler pro příchozí zprávy
 func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("📩 /message hit")
 
@@ -45,10 +47,7 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Debug – ukaž, kam to posíláme
 	fmt.Println("🌍 Sending to Make:", makeWebhookURL)
-
-	// Odeslání zprávy na Make webhook
 	resp, err := http.Post(makeWebhookURL, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		http.Error(w, "Error sending to Make", http.StatusBadGateway)
@@ -57,12 +56,12 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Přečti odpověď z Make
 	body, _ := io.ReadAll(resp.Body)
 	fmt.Println("⬅️ Make response status:", resp.Status)
 	fmt.Println("⬅️ Make response body:", string(body))
 
 	if resp.StatusCode != 200 {
+		fmt.Println("⚠️ Make returned non-200, status:", resp.Status)
 		http.Error(w, "Make returned non-200", http.StatusBadGateway)
 		return
 	}
@@ -72,15 +71,18 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("✅ Successfully forwarded to Make!")
 }
 
+// Hlavní funkce
 func main() {
 	var transport string
 	flag.StringVarP(&transport, "transport", "t", "", "Transport type (stdio or http)")
 	flag.Parse()
 
+	// 🧩 Render přiřazuje port dynamicky
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "10000"
+		port = "10000" // fallback
 	}
+	fmt.Println("📦 PORT env var:", port)
 
 	http.HandleFunc("/message", handleIncomingMessage)
 
