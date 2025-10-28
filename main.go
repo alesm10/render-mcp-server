@@ -19,7 +19,7 @@ type IncomingMessage struct {
 }
 
 // 🔗 Webhook URL z Make.com (nezapomeň, že to je tvůj vlastní)
-const makeWebhookURL = "https://hook.eu2.make.com/v8afx4o7rjtzx3mjtoer9sy3jm2dhqts"
+const makeWebhookURL = "https://hook.eu2.make.com/t85w0984wnlyu7oklq8kdnttsj90iz6n"
 
 // Handler pro příchozí zprávy
 func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
