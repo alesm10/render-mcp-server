@@ -36,16 +36,14 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 🔹 Připravíme data pro odeslání
+	fmt.Printf("📨 Přijatá zpráva od %s: %s\n", msg.Sender, msg.Message)
+
 	data, err := json.Marshal(msg)
 	if err != nil {
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Printf("📨 Přijatá zpráva od %s: %s\n", msg.Sender, msg.Message)
-
-	// 🔹 Odešleme POST do Make
 	resp, err := http.Post(makeWebhookURL, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		fmt.Println("❌ Chyba při odesílání do Make:", err)
@@ -54,9 +52,7 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// 🔹 Přečteme odpověď z Make
 	body, _ := io.ReadAll(resp.Body)
-
 	fmt.Printf("📤 Odesláno do Make | Status: %s | Odpověď: %s\n", resp.Status, string(body))
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
@@ -65,7 +61,7 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("✅ Message successfully forwarded to Make"))
+	w.Write([]byte("✅ Message forwarded to Make"))
 }
 
 func main() {
@@ -98,11 +94,16 @@ func main() {
 	fmt.Println("🔑 PORT =", os.Getenv("PORT"))
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// 🌍 Spusť mini HTTP endpoint paralelně (port 9090)
+	// 🌍 Spusť mini HTTP endpoint paralelně (Render otevře pouze port z ENV)
 	go func() {
-		fmt.Println("🌐 Listening on http://localhost:9090/message")
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
+		}
+
+		fmt.Printf("🌐 Listening on http://0.0.0.0:%s/message\n", port)
 		http.HandleFunc("/message", handleIncomingMessage)
-		if err := http.ListenAndServe(":9090", nil); err != nil {
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
