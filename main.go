@@ -61,6 +61,12 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("✅ Message forwarded to Make"))
 }
 
+// 🩵 Ping endpoint – ověření, že server běží
+func handlePing(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("🏓 pong – Render MCP Server běží! ✅"))
+}
+
 func main() {
 	versionFlag := flag.Bool("version", false, "Print version information and exit")
 	flag.BoolVar(versionFlag, "v", false, "Print version information and exit")
@@ -94,15 +100,16 @@ func main() {
 	fmt.Println("🔑 PORT =", port)
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// 🌐 Mini endpoint pro příjem zpráv – na jiném portu, např. 9090
+	// 🌐 Mini endpoint pro zprávy + ping – běží na 9090
 	go func() {
-		fmt.Println("🌐 Listening on http://localhost:9090/message")
+		fmt.Println("🌐 Listening on http://localhost:9090 ...")
 		http.HandleFunc("/message", handleIncomingMessage)
+		http.HandleFunc("/ping", handlePing)
 		if err := http.ListenAndServe(":9090", nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
 
-	// ▶️ Spusť MCP server
+	// ▶️ Spusť MCP server (Render používá PORT z env)
 	cmd.Serve(transport)
 }
