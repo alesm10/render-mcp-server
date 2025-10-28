@@ -20,10 +20,10 @@ type IncomingMessage struct {
 	Time    string `json:"time"`
 }
 
-// 🌐 URL Make webhooku (nahraď svojí aktuální URL z Make)
+// 🌐 URL Make webhooku
 const makeWebhookURL = "https://hook.eu2.make.com/6fr8k32ac8ryvt6ickkxh55wkdjimwtf"
 
-// 🧠 Handler pro příjem zprávy a odeslání do Make
+// 🧠 Handler pro přijetí zprávy a přeposlání do Make
 func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
@@ -61,7 +61,7 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("✅ Message forwarded to Make"))
 }
 
-// 🩵 Ping endpoint – ověření, že server běží
+// 🩵 Ping endpoint
 func handlePing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("🏓 pong – Render MCP Server běží! ✅"))
@@ -88,7 +88,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// 🌍 Port z Renderu (hlavní server)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -100,16 +99,17 @@ func main() {
 	fmt.Println("🔑 PORT =", port)
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// 🌐 Mini endpoint pro zprávy + ping – běží na 9090
+	// 🌐 Jeden server pro /ping i /message
+	http.HandleFunc("/ping", handlePing)
+	http.HandleFunc("/message", handleIncomingMessage)
+
 	go func() {
-		fmt.Println("🌐 Listening on http://localhost:9090 ...")
-		http.HandleFunc("/message", handleIncomingMessage)
-		http.HandleFunc("/ping", handlePing)
-		if err := http.ListenAndServe(":9090", nil); err != nil {
+		fmt.Printf("🌐 Listening on 0.0.0.0:%s ...\n", port)
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
 
-	// ▶️ Spusť MCP server (Render používá PORT z env)
+	// ▶️ Spusť Render MCP server
 	cmd.Serve(transport)
 }
