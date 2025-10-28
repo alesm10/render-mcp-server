@@ -19,7 +19,7 @@ type IncomingMessage struct {
 	Time    string `json:"time"`
 }
 
-const makeWebhookURL = "https://hook.eu2.make.com/6fr8k32ac8ryvt6ickkxh55wkdjimwtf"
+const makeWebhookURL = "https://hook.eu2.make.com/7jkqadbiwjuvhw266ocd2p8bnor605go"
 
 func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("📩 /message hit")
