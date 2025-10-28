@@ -99,17 +99,16 @@ func main() {
 	fmt.Println("🔑 PORT =", port)
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// ✅ Jeden server pro /ping i /message – bez paralelního ListenAndServe
-	http.HandleFunc("/ping", handlePing)
-	http.HandleFunc("/message", handleIncomingMessage)
-
-	fmt.Printf("🌐 Listening on 0.0.0.0:%s ...\n", port)
+	// ✅ Vedlejší server pro /ping a /message běží na 9090 (ne 8080)
 	go func() {
-		if err := http.ListenAndServe(":"+port, nil); err != nil {
+		fmt.Println("🌐 Mini server listening on port 9090 ...")
+		http.HandleFunc("/ping", handlePing)
+		http.HandleFunc("/message", handleIncomingMessage)
+		if err := http.ListenAndServe(":9090", nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
 
-	// ▶️ Spusť MCP server
+	// ▶️ Spusť MCP server (Render hlavní proces)
 	cmd.Serve(transport)
 }
