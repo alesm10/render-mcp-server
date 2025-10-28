@@ -36,8 +36,6 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("📨 Přijatá zpráva od %s: %s\n", msg.Sender, msg.Message)
-
 	data, err := json.Marshal(msg)
 	if err != nil {
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
@@ -46,7 +44,6 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.Post(makeWebhookURL, "application/json", bytes.NewBuffer(data))
 	if err != nil {
-		fmt.Println("❌ Chyba při odesílání do Make:", err)
 		http.Error(w, "Error sending to Make", http.StatusInternalServerError)
 		return
 	}
@@ -65,7 +62,6 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// 🏁 Definice a načtení flagů
 	versionFlag := flag.Bool("version", false, "Print version information and exit")
 	flag.BoolVar(versionFlag, "v", false, "Print version information and exit")
 
@@ -73,7 +69,6 @@ func main() {
 	flag.StringVarP(&transport, "transport", "t", "", "Transport type (stdio or http)")
 	flag.Parse()
 
-	// 🔧 Transport z ENV
 	if transport == "" {
 		if envTransport := os.Getenv("TRANSPORT"); envTransport != "" {
 			transport = envTransport
@@ -87,27 +82,27 @@ func main() {
 		os.Exit(0)
 	}
 
-	// 🚀 Start info
+	// 🌍 Port z Renderu (hlavní server)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	fmt.Printf("🚀 Starting Render MCP Server with transport: %s\n", transport)
 	fmt.Println("🔑 MAKE_WEBHOOK_TOKEN =", os.Getenv("MAKE_WEBHOOK_TOKEN"))
 	fmt.Println("🔑 RENDER_API_KEY =", os.Getenv("RENDER_API_KEY"))
-	fmt.Println("🔑 PORT =", os.Getenv("PORT"))
+	fmt.Println("🔑 PORT =", port)
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// 🌍 Spusť mini HTTP endpoint paralelně (Render otevře pouze port z ENV)
+	// 🌐 Mini endpoint pro příjem zpráv – na jiném portu, např. 9090
 	go func() {
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-		}
-
-		fmt.Printf("🌐 Listening on http://0.0.0.0:%s/message\n", port)
+		fmt.Println("🌐 Listening on http://localhost:9090/message")
 		http.HandleFunc("/message", handleIncomingMessage)
-		if err := http.ListenAndServe(":"+port, nil); err != nil {
+		if err := http.ListenAndServe(":9090", nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
 
-	// ▶️ Spusť Render MCP server
+	// ▶️ Spusť MCP server
 	cmd.Serve(transport)
 }
