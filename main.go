@@ -19,7 +19,7 @@ type IncomingMessage struct {
 	Time    string `json:"time"`
 }
 
-// 🌐 URL Make webhooku (nahraď svojí URL z Make)
+// 🌐 URL Make webhooku (nahraď svojí aktuální URL z Make)
 const makeWebhookURL = "https://hook.eu2.make.com/6fr8k32ac8ryvt6ickkxh55wkdjimwtf"
 
 // 🧠 Handler pro příjem zprávy a odeslání do Make
@@ -83,11 +83,11 @@ func main() {
 	fmt.Println("🔑 PORT =", os.Getenv("PORT"))
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// 🌍 Spusť mini HTTP endpoint paralelně
+	// 🌍 Spusť mini HTTP endpoint paralelně (port 9090)
 	go func() {
-		fmt.Println("🌐 Listening on http://localhost:8090/message")
+		fmt.Println("🌐 Listening on http://localhost:9090/message")
 		http.HandleFunc("/message", handleIncomingMessage)
-		if err := http.ListenAndServe(":8090", nil); err != nil {
+		if err := http.ListenAndServe(":9090", nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
