@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -35,22 +36,36 @@ func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 🔹 Připravíme data pro odeslání
 	data, err := json.Marshal(msg)
 	if err != nil {
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
 		return
 	}
 
+	fmt.Printf("📨 Přijatá zpráva od %s: %s\n", msg.Sender, msg.Message)
+
+	// 🔹 Odešleme POST do Make
 	resp, err := http.Post(makeWebhookURL, "application/json", bytes.NewBuffer(data))
 	if err != nil {
+		fmt.Println("❌ Chyba při odesílání do Make:", err)
 		http.Error(w, "Error sending to Make", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("📤 Message from %s sent to Make (status %s)\n", msg.Sender, resp.Status)
+	// 🔹 Přečteme odpověď z Make
+	body, _ := io.ReadAll(resp.Body)
+
+	fmt.Printf("📤 Odesláno do Make | Status: %s | Odpověď: %s\n", resp.Status, string(body))
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		http.Error(w, "Make returned error", http.StatusBadGateway)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("✅ Message forwarded to Make"))
+	w.Write([]byte("✅ Message successfully forwarded to Make"))
 }
 
 func main() {
