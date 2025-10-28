@@ -23,7 +23,7 @@ type IncomingMessage struct {
 // 🌐 URL Make webhooku
 const makeWebhookURL = "https://hook.eu2.make.com/6fr8k32ac8ryvt6ickkxh55wkdjimwtf"
 
-// 🧠 Handler pro přijetí zprávy a přeposlání do Make
+// 🧠 Handler pro příjem zprávy a odeslání do Make
 func handleIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
@@ -99,17 +99,17 @@ func main() {
 	fmt.Println("🔑 PORT =", port)
 	fmt.Println("🔑 TRANSPORT =", os.Getenv("TRANSPORT"))
 
-	// 🌐 Jeden server pro /ping i /message
+	// ✅ Jeden server pro /ping i /message – bez paralelního ListenAndServe
 	http.HandleFunc("/ping", handlePing)
 	http.HandleFunc("/message", handleIncomingMessage)
 
+	fmt.Printf("🌐 Listening on 0.0.0.0:%s ...\n", port)
 	go func() {
-		fmt.Printf("🌐 Listening on 0.0.0.0:%s ...\n", port)
 		if err := http.ListenAndServe(":"+port, nil); err != nil {
 			fmt.Println("❌ HTTP server error:", err)
 		}
 	}()
 
-	// ▶️ Spusť Render MCP server
+	// ▶️ Spusť MCP server
 	cmd.Serve(transport)
 }
