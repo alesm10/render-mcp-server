@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -34,9 +35,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload, _ := json.Marshal(msg)
-	resp, err := http.Post(makeWebhook, "application/json", 
-	                      http.NoBody)
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		http.Error(w, "Failed to encode message", http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := http.Post(makeWebhook, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		log.Printf("❌ Error sending to Make: %v\n", err)
 		http.Error(w, "Failed to forward to Make", http.StatusInternalServerError)
@@ -46,7 +51,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("➡️ Sent to Make: %s | Status: %s\n", makeWebhook, resp.Status)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "OK")
+	fmt.Fprint(w, "OK")
 }
 
 func main() {
